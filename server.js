@@ -28,8 +28,43 @@ app.use(express.urlencoded({
   extended: true
 }));
 
-// ADD HERE THE REST OF THE ENDPOINTS
+const findUser = (email) => {
+    return db.data.users.find(user => user.email === email);
+}
 
+// ADD HERE THE REST OF THE ENDPOINTS
+app.post('/auth/login', (req, res) => {
+  const { email, password } = res.body;
+  const userExisted = findUser(email);
+  if (userExisted) {
+    const passwordCorrect = bcrypt.compareSync(password, userExisted.password);
+    if (passwordCorrect) {
+      const token = jwt.sign({ email: userExisted.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      res.send({ ok: true, token, name: userExisted.name, email: userExisted.email });
+      return;
+    }
+  }
+  res.send({ ok: false, message: 'Credentials are wrong' });
+})
+
+app.post('/auth/register', (req, res) => {
+    const { name, password, email } = req.body;
+    const userExisted = findUser(email);
+    if (userExisted) {
+      res.send({ ok: false, message: 'User already exists' });
+      return;
+    }
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+    const user = {
+        email,
+        name,
+        password: hash,
+    };
+    db.data.users.push(user);
+    db.write();
+    res.json({ ok: true });
+})
 
 
 app.get("*", (req, res) => {
