@@ -4,6 +4,44 @@ import Router from "./Router.js";
 const Auth = {
     isLoggedIn: false,
     account: null,
+    postLogin: (response) => {
+        // TODO: store token
+        if (response.ok) {
+            Auth.isLoggedIn = true;
+            Auth.account = {
+                name: response.name,
+                email: response.email,
+            };
+            Auth.updateStatus();
+            Router.go("/");
+        } else {
+            alert(response.error);
+        }
+    },
+    register: async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const user = Object.fromEntries(formData.entries());
+        const response = await API.register(user);
+        console.log(response);
+        Auth.postLogin(response);
+        
+    },
+    login: async (event) => {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const user = Object.fromEntries(formData.entries());
+        const response = await API.login(user);
+        Auth.postLogin(response);
+    },
+    logout: () => {
+        Auth.isLoggedIn = false;
+        Auth.account = null;
+        Auth.updateStatus();
+        Router.go("/");
+    },
     updateStatus() {
         if (Auth.isLoggedIn && Auth.account) {
             document.querySelectorAll(".logged_out").forEach(

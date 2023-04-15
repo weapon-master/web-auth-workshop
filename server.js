@@ -33,14 +33,15 @@ const findUser = (email) => {
 }
 
 // ADD HERE THE REST OF THE ENDPOINTS
+// TODO: authorization with token that is sent to the client
 app.post('/auth/login', (req, res) => {
-  const { email, password } = res.body;
+  const { email, password } = req.body;
   const userExisted = findUser(email);
   if (userExisted) {
     const passwordCorrect = bcrypt.compareSync(password, userExisted.password);
     if (passwordCorrect) {
-      const token = jwt.sign({ email: userExisted.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-      res.send({ ok: true, token, name: userExisted.name, email: userExisted.email });
+      // const token = jwt.sign({ email: userExisted.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
+      res.send({ ok: true, name: userExisted.name, email: userExisted.email });
       return;
     }
   }
@@ -63,7 +64,7 @@ app.post('/auth/register', (req, res) => {
     };
     db.data.users.push(user);
     db.write();
-    res.json({ ok: true });
+    res.json({ ok: true, name: user.name, email: user.email });
 })
 
 
