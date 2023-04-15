@@ -4,7 +4,7 @@ import Router from "./Router.js";
 const Auth = {
     isLoggedIn: false,
     account: null,
-    postLogin: (response) => {
+    postLogin: (response, password) => {
         // TODO: store token
         if (response.ok) {
             Auth.isLoggedIn = true;
@@ -17,6 +17,16 @@ const Auth = {
         } else {
             alert(response.error);
         }
+        // PasswordCredential only used to store credentials that including password
+        // so we need to check if the password is available
+        if (window.PasswordCredential && user.password) {
+            const cred = new PasswordCredential({
+                id: user.email,
+                password,
+                name: response.name,
+            });
+            navigator.credentials.store(cred);
+        }
     },
     register: async (event) => {
         event.preventDefault();
@@ -25,7 +35,7 @@ const Auth = {
         const user = Object.fromEntries(formData.entries());
         const response = await API.register(user);
         console.log(response);
-        Auth.postLogin(response);
+        Auth.postLogin(response, user.password);
         
     },
     login: async (event) => {
@@ -34,13 +44,33 @@ const Auth = {
         const formData = new FormData(form);
         const user = Object.fromEntries(formData.entries());
         const response = await API.login(user);
-        Auth.postLogin(response);
+        Auth.postLogin(response, user.password);
     },
     logout: () => {
         Auth.isLoggedIn = false;
         Auth.account = null;
         Auth.updateStatus();
         Router.go("/");
+        // if user logout, it usually don't want to auto login next time
+        // so we need to prevent auto login next time
+        if (window.PasswordCredential) {
+            navigator.credentials.preventSilentAccess();
+        }
+    },
+    autoLogin: async () => {
+        if (window.PasswordCredential) {
+            const cred = await navigator.credentials.get({
+                password: true,
+                // mediation: "silent",
+            });
+            if (cred) {
+                const response = await API.login({
+                    email: cred.id,
+                    password: cred.password,
+                });
+                Auth.postLogin(response);
+            }
+        }
     },
     updateStatus() {
         if (Auth.isLoggedIn && Auth.account) {
@@ -72,7 +102,7 @@ const Auth = {
     },
 }
 Auth.updateStatus();
-
+Auth.autoLogin();
 export default Auth;
 
 // make it a global object
