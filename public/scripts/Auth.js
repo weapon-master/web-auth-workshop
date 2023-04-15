@@ -19,7 +19,7 @@ const Auth = {
         }
         // PasswordCredential only used to store credentials that including password
         // so we need to check if the password is available
-        if (window.PasswordCredential && user.password) {
+        if (window.PasswordCredential && password) {
             const cred = new PasswordCredential({
                 id: user.email,
                 password,
@@ -56,6 +56,11 @@ const Auth = {
         if (window.PasswordCredential) {
             navigator.credentials.preventSilentAccess();
         }
+    },
+    loginFromGoogle: async (data) => {
+        const response = await API.loginFromGoogle(data);
+        console.log(response);
+        Auth.postLogin(response);
     },
     autoLogin: async () => {
         if (window.PasswordCredential) {

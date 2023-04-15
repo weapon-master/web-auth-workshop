@@ -67,6 +67,40 @@ app.post('/auth/register', (req, res) => {
     res.json({ ok: true, name: user.name, email: user.email });
 })
 
+app.post('/auth/google-login', (req, res) => {
+  const { credential } = req.body;
+  const jwt = jwtJsDecode.jwtDecode(credential);
+  let user = {
+    email: jwt.payload.email,
+    name: `${jwt.payload.given_name} ${jwt.payload.family_name}`,
+    password: null,
+  }
+  const existingUser = findUser(user.email);
+  if (existingUser) {
+    if (existingUser.provider?.google) {
+      return res.send({ ok: true, name: existingUser.name, email: existingUser.email });
+    }
+    user = {
+      ...existingUser,
+      provider: {
+        ...(existingUser.provider ?? {}),
+        google: jwt.payload.aud,
+      },
+    }
+    db.data.users = db.data.users.map(u => u.email === user.email ? user : u);
+    db.write();
+    return res.send({ ok: true, name: user.name, email: user.email });
+  }
+
+  db.data.users.push({
+    ...user,
+    provider: {
+      google: jwt.payload.aud,
+    },
+  });
+  db.write();
+  res.send({ ok: true, name: user.name, email: user.email });
+})
 
 app.get("*", (req, res) => {
     res.sendFile(__dirname + "public/index.html"); 
